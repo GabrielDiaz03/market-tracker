@@ -2,31 +2,27 @@ name: Wallapop Seiko 5 Monitor
 
 on:
   schedule:
-    # Se ejecuta cada 30 minutos (ajustable)
     - cron: '*/30 * * * *'
-  workflow_dispatch: # Permite ejecutarlo manualmente para probar
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout del repositorio
         uses: actions/checkout@v4
-        with:
-          # Necesario para poder hacer push del historial actualizado
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          # Aquí NO debe haber ninguna línea de 'cache'
 
       - name: Instalar dependencias
         run: npm install
 
       - name: Ejecutar script de búsqueda
-        run: node index.js
+        run: node scraper.js
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -36,5 +32,5 @@ jobs:
           git config --global user.name "Wallapop Bot"
           git config --global user.email "bot@github.com"
           git add history.json
-          git commit -m "Update history [skip ci]" || echo "No hay nuevos productos"
+          git commit -m "Update history [skip ci]" || echo "No hay cambios"
           git push
