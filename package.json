@@ -1,4 +1,5 @@
-{"name": "wallapop-alerts-telegram",
+{
+  "name": "wallapop-alerts-telegram",
   "version": "1.0.0",
   "main": "scraper.js",
   "scripts": {
@@ -7,4 +8,6 @@
   "dependencies": {
     "axios": "^1.6.0",
     "dotenv": "^16.3.0",
-    "node-telegram-bot-api": "^0.64.0"}}
+    "node-telegram-bot-api": "^0.64.0"
+  }
+}

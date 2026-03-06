@@ -16,7 +16,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          # Aquí NO debe haber ninguna línea de 'cache'
 
       - name: Instalar dependencias
         run: npm install
