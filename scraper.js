@@ -22,12 +22,15 @@ async function run() {
         console.log(`Buscando: ${KEYWORD}...`);
 
         // 2. Llamada a Wallapop con Headers para evitar bloqueos
-        const response = await axios.get(SEARCH_URL, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-                'Accept': 'application/json'
-            }
-        });
+       const response = await axios.get(SEARCH_URL, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'es-ES,es;q=0.9',
+        'Origin': 'https://es.wallapop.com',
+        'Referer': 'https://es.wallapop.com/'
+      }
+    });
 
         const items = response.data.search_objects || [];
         let newItemsFound = 0;
