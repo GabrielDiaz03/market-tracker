@@ -2,7 +2,7 @@ name: Wallapop Seiko 5 Monitor
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '0 */6 * * *'  # Esto ejecutará el bot cada 6 horas
   workflow_dispatch:
 
 jobs:

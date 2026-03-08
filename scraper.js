@@ -13,32 +13,39 @@ const SEARCH_URL = `https://es.wallapop.com/app/search?keywords=${encodeURICompo
 
 async function run() {
   try {
-    // 1. Leer historial local
     let history = [];
     if (fs.existsSync(HISTORY_FILE)) {
       history = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf-8'));
     }
 
-    // --- NUEVO: Retraso aleatorio entre 3 y 8 segundos para evitar bloqueos ---
-    const delay = Math.floor(Math.random() * (8000 - 3000 + 1) + 3000);
-    console.log(`Esperando ${delay / 1000} segundos para parecer un humano...`);
-    await new Promise(resolve => setTimeout(resolve, delay));
-    // -----------------------------------------------------------------------
+    // --- RECARGA DE TIMEOUT: Espera entre 15 y 30 segundos ---
+    const waitTime = Math.floor(Math.random() * (30000 - 15000 + 1) + 15000);
+    console.log(`Pausa de seguridad: esperando ${waitTime / 1000} segundos...`);
+    await new Promise(resolve => setTimeout(resolve, waitTime));
 
-    console.log(`Buscando: ${KEYWORD}...`);
+    console.log(`Iniciando búsqueda de: ${KEYWORD}...`);
 
-    // 2. Llamada a Wallapop con Headers optimizados
-    const response = await axios.get(SEARCH_URL, {
+    // Intentamos usar la URL de la web directamente con parámetros de rastreo reales
+    const WEB_URL = `https://es.wallapop.com/app/search?keywords=${encodeURIComponent(KEYWORD)}&order_by=newest&source=search_box`;
+
+    const response = await axios.get(WEB_URL, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Accept': 'application/json, text/plain, */*',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
         'Accept-Language': 'es-ES,es;q=0.9',
-        'Origin': 'https://es.wallapop.com',
-        'Referer': 'https://es.wallapop.com/',
-        'X-DeviceCode': 'web-browser-123',
-        'Cache-Control': 'no-cache'
-      }
+        'Cache-Control': 'max-age=0',
+        'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': '"macOS"',
+        'Upgrade-Insecure-Requests': '1'
+      },
+      timeout: 10000 // 10 segundos de tiempo de espera para la respuesta
     });
+
+    // Si llegamos aquí sin error 403, ¡hemos pasado!
+    console.log("¡Conexión exitosa!");
+    
+    // El resto de tu lógica de procesar items...
 
         const items = response.data.search_objects || [];
         let newItemsFound = 0;
