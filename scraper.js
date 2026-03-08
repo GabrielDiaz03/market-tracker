@@ -9,26 +9,34 @@ const bot = new TelegramBot(TOKEN);
 
 const HISTORY_FILE = './history.json';
 const KEYWORD = 'seiko 5';
-const SEARCH_URL = `https://api.wallapop.com/api/v3/general/search?keywords=${encodeURIComponent(KEYWORD)}&filters_source=search_box&longitude=-3.69196&latitude=40.41956`;
+const SEARCH_URL = `https://es.wallapop.com/app/search?keywords=${encodeURIComponent(KEYWORD)}&order_by=newest`;
 
 async function run() {
-    try {
-        // 1. Leer historial local
-        let history = [];
-        if (fs.existsSync(HISTORY_FILE)) {
-            history = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf-8'));
-        }
+  try {
+    // 1. Leer historial local
+    let history = [];
+    if (fs.existsSync(HISTORY_FILE)) {
+      history = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf-8'));
+    }
 
-        console.log(`Buscando: ${KEYWORD}...`);
+    // --- NUEVO: Retraso aleatorio entre 3 y 8 segundos para evitar bloqueos ---
+    const delay = Math.floor(Math.random() * (8000 - 3000 + 1) + 3000);
+    console.log(`Esperando ${delay / 1000} segundos para parecer un humano...`);
+    await new Promise(resolve => setTimeout(resolve, delay));
+    // -----------------------------------------------------------------------
 
-        // 2. Llamada a Wallapop con Headers para evitar bloqueos
-       const response = await axios.get(SEARCH_URL, {
+    console.log(`Buscando: ${KEYWORD}...`);
+
+    // 2. Llamada a Wallapop con Headers optimizados
+    const response = await axios.get(SEARCH_URL, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         'Accept': 'application/json, text/plain, */*',
         'Accept-Language': 'es-ES,es;q=0.9',
         'Origin': 'https://es.wallapop.com',
-        'Referer': 'https://es.wallapop.com/'
+        'Referer': 'https://es.wallapop.com/',
+        'X-DeviceCode': 'web-browser-123',
+        'Cache-Control': 'no-cache'
       }
     });
 
