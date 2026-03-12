@@ -12,50 +12,50 @@ async function enviarAlertaTelegram(texto) {
       text: texto,
       parse_mode: 'Markdown'
     });
-    console.log("¡Notificación enviada a Telegram!");
+    console.log("✅ ¡Mensaje enviado a Telegram correctamente!");
   } catch (err) {
-    console.error("Error al contactar con Telegram:", err.message);
+    console.error("❌ Error de Telegram:", err.response ? err.response.data : err.message);
   }
 }
 
 (async () => {
-  console.log("Iniciando navegador invisible...");
+  console.log("🚀 Iniciando rastreador de Seiko 5...");
   const navegador = await chromium.launch({ headless: true });
   const contexto = await navegador.newContext({
-    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
   });
   const pagina = await contexto.newPage();
 
   const busqueda = "seiko 5";
-  const precioMaximo = 150; // <--- AQUÍ ESTÁ TU FILTRO
-  const enlaceWallapop = `https://es.wallapop.com/app/search?keywords=${encodeURIComponent(busqueda)}&order_by=newest`;
+  const precioMaximo = 150; // <--- TU FILTRO
+  const urlWallapop = `https://es.wallapop.com/app/search?keywords=${encodeURIComponent(busqueda)}&order_by=newest`;
 
   try {
-    await pagina.goto(enlaceWallapop, { waitUntil: 'networkidle', timeout: 60000 });
-    await pagina.waitForTimeout(5000);
+    await pagina.goto(urlWallapop, { waitUntil: 'networkidle', timeout: 60000 });
+    await pagina.waitForTimeout(5000); // Espera para carga de imágenes
 
-    // 1. Extraemos los datos del primer anuncio
-    const tituloItem = await pagina.locator('[class*="ItemCard__title"]').first().innerText();
+    // Extraemos los datos del primer anuncio que aparece
+    const titulo = await pagina.locator('[class*="ItemCard__title"]').first().innerText();
     const precioTexto = await pagina.locator('[class*="ItemCard__price"]').first().innerText();
-    const urlAnuncio = pagina.url();
+    const enlace = pagina.url();
 
-    // 2. Limpiamos el precio para poder comparar (Ej: "120 €" -> 120)
-    const precioNumerico = parseFloat(precioTexto.replace(/[^0-9,.-]/g, '').replace(',', '.'));
+    // Convertimos "120 €" en el número 120
+    const precioLimpio = parseFloat(precioTexto.replace(/[^0-9,.]/g, '').replace(',', '.'));
 
-    console.log(`Analizando: ${tituloItem} - Precio: ${precioNumerico}€`);
+    console.log(`🔎 He encontrado: "${titulo}" por ${precioLimpio}€`);
 
-    // 3. Aplicamos la lógica del filtro
-    if (precioNumerico <= precioMaximo) {
-      const mensajeFinal = `⌚ *¡CHOLLO SEIKO 5!* (Menos de ${precioMaximo}€)\n\n📌 *Producto:* ${tituloItem} \n💰 *Precio:* ${precioTexto} \n\n🔗 [Abrir en Wallapop](${urlAnuncio})`;
-      await enviarAlertaTelegram(mensajeFinal);
+    if (precioLimpio <= precioMaximo) {
+      console.log("💰 ¡PRECIO VÁLIDO! Enviando notificación...");
+      const mensaje = `⌚ *¡NUEVO SEIKO 5!* \n\n📌 ${titulo} \n💰 *Precio:* ${precioTexto} \n\n🔗 [Ver en Wallapop](${enlace})`;
+      await enviarAlertaTelegram(mensaje);
     } else {
-      console.log(`El precio (${precioNumerico}€) supera tu límite de ${precioMaximo}€. No se envía alerta.`);
+      console.log(`Skipping: El precio (${precioLimpio}€) es superior a tu límite de ${precioMaximo}€.`);
     }
 
   } catch (error) {
-    console.error("Hubo un problema durante el rastreo:", error.message);
+    console.error("⚠️ Error en el proceso:", error.message);
   }
 
   await navegador.close();
-  console.log("Navegador cerrado.");
+  console.log("🏁 Proceso finalizado.");
 })();
