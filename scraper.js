@@ -25,7 +25,7 @@ async function enviarTelegram(texto) {
   const page = await context.newPage();
   
   const query = "seiko 5";
-  const precioMax = 150;
+  const precioMax = 400;
 
   try {
     console.log("🚀 Navegando a Wallapop...");
