@@ -27,7 +27,6 @@ async function enviarAlertaTelegram(texto) {
   const pagina = await contexto.newPage();
 
   const busqueda = "seiko 5";
-  const precioMaximo = 150; // <--- TU FILTRO
   const urlWallapop = `https://es.wallapop.com/app/search?keywords=${encodeURIComponent(busqueda)}&order_by=newest`;
 
   try {
