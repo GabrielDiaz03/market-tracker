@@ -1,12 +1,10 @@
 {
-  "name": "market-tracker",
-  "version": "1.0.0",
+  "name": "seiko-monitor-bot",
+  "version": "1.1.0",
+  "description": "Bot rastreador con motor de navegador",
   "main": "scraper.js",
-  "scripts": {
-    "start": "node scraper.js"
-  },
   "dependencies": {
-    "axios": "^1.6.0",
-    "node-telegram-bot-api": "^0.64.0"
+    "playwright": "^1.40.0",
+    "axios": "^1.6.0"
   }
 }
