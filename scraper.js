@@ -14,8 +14,10 @@ async function enviarTelegram(texto) {
 }
 
 (async () => {
-  const browser = await chromium.launch({ headless: true });
-  // Usamos un perfil de navegador más completo
+  const browser = await chromium.launch({ 
+    headless: true,
+    args: ['--disable-blink-features=AutomationControlled'] // Evita detección básica
+  });
   const context = await browser.newContext({
     viewport: { width: 1280, height: 800 },
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
@@ -31,43 +33,124 @@ async function enviarTelegram(texto) {
       waitUntil: 'networkidle', timeout: 60000 
     });
 
-    // 1. Aceptar cookies de forma agresiva
-    const btnCookies = page.locator('button#onetrust-accept-btn-handler');
-    if (await btnCookies.isVisible({ timeout: 10000 })) {
-      await btnCookies.click();
-      console.log("✅ Cookies aceptadas.");
+    // --- 1. ACEPTAR COOKIES DE FORMA INTELIGENTE ---
+    const selectoresCookies = [
+      'button#onetrust-accept-btn-handler',
+      'button:has-text("Aceptar")',
+      'button:has-text("Aceptar todas")',
+      '[aria-label="Cerrar"]',
+      'button.cc-btn.cc-allow'
+    ];
+    for (const selector of selectoresCookies) {
+      const boton = page.locator(selector);
+      try {
+        if (await boton.isVisible({ timeout: 3000 })) {
+          await boton.click();
+          console.log(`✅ Cookies aceptadas con selector: ${selector}`);
+          await page.waitForTimeout(2000); // Pequeña pausa tras el clic
+          break;
+        }
+      } catch (e) {
+        // No visible, probamos siguiente
+      }
     }
 
-    // 2. Simular un poco de scroll para que Wallapop crea que somos humanos
-    await page.mouse.wheel(0, 500);
-    await page.waitForTimeout(3000);
-
+    // --- 2. ESPERAR A QUE APAREZCA AL MENOS UN ANUNCIO (VARIOS SELECTORES) ---
     console.log("🧐 Buscando anuncios...");
-    // Usamos un selector más genérico por si han cambiado las clases
-    const itemCard = page.locator('a.ItemCardList__item, [class*="ItemCard"]').first();
     
-    // Esperamos a que aparezca el anuncio
-    await itemCard.waitFor({ state: 'visible', timeout: 15000 });
+    // Selectores posibles para un anuncio (ordenados de más específico a más genérico)
+    const selectoresAnuncio = [
+      'a[href*="/item/"]',                          // Enlace que contiene "/item/" (muy estable)
+      'a.ItemCardList__item',                       // Clase específica actual
+      '[class*="ItemCard"] a[href*="/item/"]',      // Combinación
+      'article',                                     // Artículo (si usan etiquetas semánticas)
+      'div[class*="card"] a[href*="/item/"]'         // Fallback
+    ];
 
-    const title = await page.locator('[class*="ItemCard__title"]').first().innerText();
-    const priceText = await page.locator('[class*="ItemCard__price"]').first().innerText();
-    const link = await itemCard.getAttribute('href');
+    let elementoEncontrado = null;
+    for (const selector of selectoresAnuncio) {
+      try {
+        console.log(`Probando selector: ${selector}`);
+        // Esperamos hasta 10 segundos por cada selector
+        await page.locator(selector).first().waitFor({ state: 'visible', timeout: 10000 });
+        elementoEncontrado = selector;
+        console.log(`✅ Anuncio encontrado con selector: ${selector}`);
+        break;
+      } catch (e) {
+        console.log(`Selector ${selector} no funcionó, probando siguiente...`);
+      }
+    }
+
+    if (!elementoEncontrado) {
+      throw new Error("No se pudo encontrar ningún anuncio con los selectores probados.");
+    }
+
+    // --- 3. COMPROBAR SI HAY RESULTADOS (MENSAJE "NO HAY ANUNCIOS") ---
+    const noResultsSelectors = [
+      'text="No hay anuncios"',
+      'div:has-text("No hemos encontrado")',
+      'h2:has-text("Sin resultados")'
+    ];
+    for (const sel of noResultsSelectors) {
+      const visible = await page.locator(sel).first().isVisible().catch(() => false);
+      if (visible) {
+        console.log("⚠️ La búsqueda no devolvió resultados.");
+        await browser.close();
+        return;
+      }
+    }
+
+    // --- 4. SCROLL PARA CARGAR MÁS (OPCIONAL PERO RECOMENDADO) ---
+    await page.evaluate(() => window.scrollBy(0, 800));
+    await page.waitForTimeout(2000);
+
+    // --- 5. EXTRAER DATOS DEL PRIMER ANUNCIO ---
+    // Usamos el primer enlace que contiene "/item/" como base segura
+    const primerEnlace = page.locator('a[href*="/item/"]').first();
+    
+    // Intentamos obtener título y precio con selectores flexibles
+    let titulo = "Título no encontrado";
+    let precioTexto = "0 €";
+    
+    try {
+      titulo = await primerEnlace.locator('xpath=..').locator('[class*="title"], h2, h3, [class*="name"]').first().innerText();
+    } catch (e) { /* ignorar */ }
+    
+    try {
+      precioTexto = await primerEnlace.locator('xpath=..').locator('[class*="price"], span:has-text("€"), [class*="money"]').first().innerText();
+    } catch (e) { /* ignorar */ }
+    
+    const link = await primerEnlace.getAttribute('href');
     const fullLink = link.startsWith('http') ? link : `https://es.wallapop.com${link}`;
 
-    const priceNum = parseFloat(priceText.replace(/[^0-9,.]/g, '').replace(',', '.'));
+    const precioNum = parseFloat(precioTexto.replace(/[^0-9,.]/g, '').replace(',', '.')) || 0;
 
-    console.log(`✨ Encontrado: ${title} (${priceNum}€)`);
+    console.log(`✨ Encontrado: ${titulo} (${precioNum}€)`);
 
-    if (priceNum <= precioMax) {
-      await enviarTelegram(`✅ *SEIKO 5 ENCONTRADO* \n\n${title}\n💰 *Precio:* ${priceText}\n\n🔗 [Ver en Wallapop](${fullLink})`);
+    if (precioNum <= precioMax) {
+      await enviarTelegram(`✅ *SEIKO 5 ENCONTRADO* \n\n${titulo}\n💰 *Precio:* ${precioTexto}\n\n🔗 [Ver en Wallapop](${fullLink})`);
     }
 
   } catch (error) {
     console.error("❌ ERROR CRÍTICO:", error.message);
-    // GUARDAR CAPTURA DE PANTALLA PARA DIAGNÓSTICO
-    await page.screenshot({ path: 'debug_error.png', fullPage: true });
-    console.log("📸 Se ha guardado una captura 'debug_error.png' en el servidor.");
+    
+    // --- 6. CAPTURA DE PANTALLA Y HTML PARA DEPURACIÓN ---
+    const timestamp = Date.now();
+    const screenshotPath = `debug_error_${timestamp}.png`;
+    const htmlPath = `debug_error_${timestamp}.html`;
+    
+    await page.screenshot({ path: screenshotPath, fullPage: true });
+    console.log(`📸 Captura guardada: ${screenshotPath}`);
+    
+    const htmlContent = await page.content();
+    fs.writeFileSync(htmlPath, htmlContent);
+    console.log(`📄 HTML guardado: ${htmlPath}`);
+    
+    // Opcional: imprimir fragmento del HTML para ver el problema
+    console.log("Fragmento del HTML (primeros 1000 caracteres):");
+    console.log(htmlContent.substring(0, 1000));
+    
+  } finally {
+    await browser.close();
   }
-
-  await browser.close();
 })();

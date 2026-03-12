@@ -2,10 +2,9 @@ name: Seiko Monitor Playwright
 
 on:
   schedule:
-    - cron: '0 * * * *'   # Se ejecuta cada hora
+    - cron: '0 * * * *'
   workflow_dispatch:
 
-# Fuerza a GitHub Actions a usar Node 24 internamente
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -33,3 +32,14 @@ jobs:
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        continue-on-error: true  # Permite que el workflow continúe aunque falle el bot
+
+      - name: Subir capturas de error
+        if: always()  # Se ejecuta siempre, incluso si falló el paso anterior
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-artifacts
+          path: |
+            debug_error_*.png
+            debug_error_*.html
+          if-no-files-found: ignore
