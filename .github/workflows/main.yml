@@ -2,12 +2,17 @@ name: Seiko Monitor Playwright
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Se ejecuta cada hora
+    - cron: '0 * * * *'   # Se ejecuta cada hora
   workflow_dispatch:
+
+# Fuerza a GitHub Actions a usar Node 24 internamente
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   ejecutar_rastreo:
     runs-on: ubuntu-latest
+
     steps:
       - name: Descargar código
         uses: actions/checkout@v4
@@ -15,12 +20,12 @@ jobs:
       - name: Instalar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
 
       - name: Instalar librerías
         run: npm install
 
-      - name: Instalar Navegador Chromium
+      - name: Instalar navegador Chromium
         run: npx playwright install --with-deps chromium
 
       - name: Ejecutar Bot
